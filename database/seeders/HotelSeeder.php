@@ -25,6 +25,22 @@ class HotelSeeder extends Seeder
             ],
 
             [
+                'city' => 'Aleppo',
+                'name' => 'Aleppo Grand Hotel',
+                'folder' => 'aleppo_grand_hotel',
+                'description' => 'Luxury hotel in Aleppo.',
+                'phone' => '0999067802',
+            ],
+
+            [
+                'city' => 'Homs',
+                'name' => 'Noria homs hotel',
+                'folder' => 'Noria_homs_hotel',
+                'description' => 'Luxury hotel in Homs.',
+                'phone' => '0999067803',
+            ],
+
+            [
                 'city' => 'Beijing',
                 'name' => 'Beijing Palace Hotel',
                 'folder' => 'beijing_palace_hotel',
@@ -33,11 +49,27 @@ class HotelSeeder extends Seeder
             ],
 
             [
+                'city' => 'Shanghai',
+                'name' => 'Park Hyatt Hotel',
+                'folder' => 'park_hyatt_hotel',
+                'description' => 'Luxury hotel in Shanghai.',
+                'phone' => '0999849003',
+            ],
+
+            [
                 'city' => 'Rome',
                 'name' => 'Rome Imperial Hotel',
                 'folder' => 'rome_imperial_hotel',
                 'description' => 'Luxury hotel in Rome.',
                 'phone' => '0999558003',
+            ],
+
+            [
+                'city' => 'Venice',
+                'name' => 'Regis Venice Hotel',
+                'folder' => 'regis_venice_hotel',
+                'description' => 'Luxury hotel in Venice.',
+                'phone' => '0999558004',
             ],
 
         ];
@@ -66,7 +98,7 @@ class HotelSeeder extends Seeder
                 'price' => 25,
             ],
 
-        ];
+        ]; 
 
         foreach ($hotels as $data) {
 

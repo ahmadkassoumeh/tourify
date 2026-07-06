@@ -19,8 +19,9 @@ return new class extends Migration
 
             $table->morphs('bookable');
 
-            $table->date('booking_date');
-
+            $table->date('booking_date')->nullable();
+            $table->date('start_date')->nullable();
+            $table->date('end_date')->nullable();
             $table->enum('status', [
                 'pending',
                 'confirmed',
