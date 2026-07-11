@@ -40,7 +40,9 @@ class BookRoomService
                 throw new Exception('هذه الغرفة محجوزة بالفعل.');
             }
 
-            $price = $room->price;
+            $days = $startDate->diff($endDate)->days;
+
+            $price = $room->price * $days;
 
             if ($user->credit < $price) {
                 throw new Exception('لا يوجد رصيد كافٍ لحجز هذه الغرفة.');
