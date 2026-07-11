@@ -22,4 +22,14 @@ class Restaurant extends Model
     {
         return $this->hasMany(RestaurantImage::class);
     }
+
+    public function ratings()
+    {
+        return $this->morphMany(Rating::class, 'rateable');
+    }
+
+    public function favorites()
+    {
+        return $this->morphMany(Favorite::class, 'favoriteable');
+    }
 }

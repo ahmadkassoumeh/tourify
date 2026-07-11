@@ -17,4 +17,9 @@ class FlightSchedule extends Model
     {
         return $this->belongsTo(Flight::class);
     }
+
+    public function bookings()
+    {
+    return $this->morphMany(Booking::class, 'bookable');
+    }
 }

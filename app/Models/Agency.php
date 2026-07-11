@@ -29,4 +29,9 @@ class Agency extends Model
     {
         return $this->hasMany(Package::class);
     }
+
+    public function ratings()
+    {
+        return $this->morphMany(Rating::class, 'rateable');
+    }
 }

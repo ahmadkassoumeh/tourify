@@ -32,6 +32,30 @@ class PlaceSeeder extends Seeder
             ],
 
             [
+                'city' => 'Homs',
+                'name' => 'ALHssn Castle',
+                'folder' => 'alhssn_castle',
+                'description' => 'A historic castle in Homs.',
+                'history' => 'Built during the Crusader period.',
+            ],
+
+            [
+                'city' => 'Aleppo',
+                'name' => 'Aleppo Castle',
+                'folder' => 'aleppo_castle',
+                'description' => 'A historic castle in Aleppo.',
+                'history' => 'Built during the Crusader period.',
+            ],
+
+            [
+                'city' => 'Latakia',
+                'name' => 'Mashqita Lakes',
+                'folder' => 'mashqita_lakes',
+                'description' => 'A scenic lake in Latakia.',
+                'history' => null,
+            ],
+
+            [
                 'city' => 'Beijing',
                 'name' => 'Forbidden City',
                 'folder' => 'forbidden_city',
@@ -48,18 +72,50 @@ class PlaceSeeder extends Seeder
             ],
 
             [
+                'city' => 'Shanghai',
+                'name' => 'Yu Garden',
+                'folder' => 'yu_garden',
+                'description' => 'the largest and oldest rockery in the southern Yangtze River region.',
+                'history' => null,
+            ],
+
+            [
+                'city' => 'Guangzhou',
+                'name' => 'Canton Tower',
+                'folder' => 'canton_tower',
+                'description' => 'A modern landmark in Guangzhou.',
+                'history' => null,
+            ],
+
+            [
                 'city' => 'Rome',
                 'name' => 'Colosseum',
                 'folder' => 'colosseum',
                 'description' => 'Ancient Roman amphitheatre.',
                 'history' => 'Built in 72 AD.',
-            ],
+            ], 
 
             [
                 'city' => 'Rome',
                 'name' => 'Villa Borghese',
                 'folder' => 'villa_borghese',
                 'description' => 'One of the largest public parks in Rome.',
+                'history' => null,
+            ],
+
+            [
+                'city' => 'Venice',
+                'name' => 'Piazza San Marco',
+                'folder' => 'piazza_san_marco',
+                'description' => 'The main square of Venice.',
+                'history' => null,
+            ],
+
+            [
+                'city' => 'Naples',
+                'name' => 'Pompeii',
+                'folder' => 'pompeii',
+                'description' => 'Ancient Roman city preserved by the eruption of Mount Vesuvius.',
                 'history' => null,
             ],
 

@@ -23,4 +23,14 @@ class Place extends Model
     {
         return $this->hasMany(PlaceImage::class);
     }
+
+    public function ratings()
+    {
+        return $this->morphMany(Rating::class, 'rateable');
+    }
+
+    public function favorites()
+    {
+        return $this->morphMany(Favorite::class, 'favoriteable');
+    }
 }

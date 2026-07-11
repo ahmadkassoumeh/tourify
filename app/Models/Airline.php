@@ -15,4 +15,14 @@ class Airline extends Model
     {
         return $this->hasMany(Flight::class);
     }
+
+    public function ratings()
+    {
+        return $this->morphMany(Rating::class, 'rateable');
+    }
+
+    public function favorites()
+    {
+        return $this->morphMany(Favorite::class, 'favoriteable');
+    }
 }

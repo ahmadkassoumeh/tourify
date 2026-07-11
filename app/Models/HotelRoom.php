@@ -17,4 +17,9 @@ class HotelRoom extends Model
     {
         return $this->belongsTo(Hotel::class);
     }
+
+    public function bookings()
+    {
+        return $this->morphMany(Booking::class, 'bookable');
+    }
 }
