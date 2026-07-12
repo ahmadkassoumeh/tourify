@@ -1,11 +1,14 @@
 <?php
 
 namespace App\Http\Controllers;
+
 use App\Http\Controllers\Controller;
 use App\Models\Place;
 use App\Services\RatingService;
 use App\Services\FavoriteService;
-
+use Illuminate\Validation\ValidationException;
+use App\Models\City;
+use App\Utilities\ApiResponseService;
 use Illuminate\Http\Request;
 
 class PlaceController extends Controller
@@ -17,10 +20,9 @@ class PlaceController extends Controller
 
     public function index()
     {
-        $places = Place::with(['images' => function ($query) 
-            {
+        $places = Place::with(['images' => function ($query) {
             $query->where('is_main', true);
-            }])
+        }])
             ->withAvg('ratings as average_rating', 'rating')
             ->get();
 
@@ -58,9 +60,9 @@ class PlaceController extends Controller
 
         return response()->json([
             'message' => 'Rating saved.'
-       ]);
+        ]);
     }
-    
+
     public function toggleFavorite($id)
     {
         $place = Place::findOrFail($id);
@@ -74,5 +76,31 @@ class PlaceController extends Controller
             'is_favorite' => $favorite
         ]);
     }
-    
+
+    public function dropList(Request $request)
+    {
+        $request->validate([
+            'country_id' => ['required', 'exists:countries,id'],
+            'city_id'    => ['required', 'exists:cities,id'],
+        ]);
+
+        $city = City::where('id', $request->city_id)
+            ->where('country_id', $request->country_id)
+            ->first();
+
+        if (!$city) {
+            throw ValidationException::withMessages([
+                'city_id' => 'The selected city does not belong to the selected country.',
+            ]);
+        }
+
+        $places = Place::where('city_id', $city->id)
+            ->select('id', 'name')
+            ->orderBy('name')
+            ->get();
+
+        return ApiResponseService::successResponse(
+            data: $places
+        );
+    }
 }

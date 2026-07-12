@@ -16,4 +16,10 @@ class PackageController extends Controller
     {
         return $this->packageService->store($request);
     }
+
+    public function hint(Request $request)
+    {
+        $data = $request->all();
+        return $this->packageService->hint($data);
+    }
 }

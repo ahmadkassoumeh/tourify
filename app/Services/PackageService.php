@@ -106,11 +106,19 @@ class PackageService
         float $amount
     ): void {
 
-        if ($user->credit < $amount) {
+        $currentBalance = $user->credit;
+        $missingAmount = max(0, $amount - $currentBalance);
+
+        if ($currentBalance < $amount) {
 
             throw ValidationException::withMessages([
 
-                'wallet' => 'Insufficient wallet balance.'
+                'wallet' => sprintf(
+                    'Insufficient wallet balance. Current balance: %.2f, Required: %.2f, Missing: %.2f.',
+                    $currentBalance,
+                    $amount,
+                    $missingAmount
+                ),
 
             ]);
         }
@@ -200,7 +208,7 @@ class PackageService
                 $hotelCost + $flightCost,
                 $data
             );
-            return $package; 
+            return $package;
         });
 
         return ApiResponseService::createdResponse(
@@ -349,7 +357,7 @@ class PackageService
             return;
         }
 
-        
+
         // الغرف المحجوزة بهذا التاريخ
         $reservedRooms = Booking::where('bookable_type', HotelRoom::class)
             ->where('booking_date', $day->date)
@@ -459,5 +467,49 @@ class PackageService
 
             ]);
         }
+    }
+
+    public function hint(array $data)
+    {
+        $hotelTotalCost = $this->calculateHotelCost($data);
+
+        $flightTotalCost = $this->calculateFlightCost($data);
+
+        $totalCost = $hotelTotalCost + $flightTotalCost;
+
+        $hotelCostPerPackage = round(
+            $hotelTotalCost / $data['quantity'],
+            2
+        );
+
+        $flightCostPerPackage = round(
+            $flightTotalCost / $data['quantity'],
+            2
+        );
+
+        $packageCost = round(
+            $totalCost / $data['quantity'],
+            2
+        );
+
+        return ApiResponseService::successResponse([
+
+            // التكلفة الكلية على المكتب
+            'total_cost' => round($totalCost, 2),
+
+            'hotel_total_cost' => round($hotelTotalCost, 2),
+
+            'flight_total_cost' => round($flightTotalCost, 2),
+
+            // تكلفة الباقة الواحدة
+            'costWithoutProfit' => $packageCost,
+
+            // تفاصيل تكلفة الباقة الواحدة
+            'hotel_cost_per_package' => $hotelCostPerPackage,
+
+            'flight_cost_per_package' => $flightCostPerPackage,
+
+            'suggested_min_price' => $packageCost * 1.15,
+        ]);
     }
 }

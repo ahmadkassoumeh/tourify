@@ -8,6 +8,9 @@ use App\Services\FavoriteService;
 use Illuminate\Http\Request;
 use App\Services\BookRoomService;
 use App\Models\Hotel;
+use App\Models\City;
+use App\Utilities\ApiResponseService;
+use Illuminate\Validation\ValidationException;
 use App\Models\HotelRoom;
 use DateTime;
 
@@ -21,8 +24,7 @@ class HotelController extends Controller
 
     public function index()
     {
-        $hotel = Hotel::with(['images' => function ($query) 
-        {
+        $hotel = Hotel::with(['images' => function ($query) {
             $query->where('is_main', true);
         }])
             ->withAvg('ratings as average_rating', 'rating')
@@ -102,5 +104,46 @@ class HotelController extends Controller
             'success' => true,
             'data' => $booking
         ]);
+    }
+
+    public function dropList(Request $request)
+    {
+        $request->validate([
+            'country_id' => ['required', 'exists:countries,id'],
+            'city_id'    => ['required', 'exists:cities,id'],
+        ]);
+
+        $city = City::where('id', $request->city_id)
+            ->where('country_id', $request->country_id)
+            ->first();
+
+        if (!$city) {
+            throw ValidationException::withMessages([
+                'city_id' => 'The selected city does not belong to the selected country.',
+            ]);
+        }
+
+        $hotels = Hotel::with('rooms')
+            ->where('city_id', $city->id)
+            ->get()
+            ->map(function ($hotel) {
+
+                return [
+
+                    'id' => $hotel->id,
+
+                    'name' => $hotel->name,
+
+                    'room_types' => $hotel->rooms
+                        ->pluck('type')
+                        ->unique()
+                        ->values(),
+
+                ];
+            });
+
+        return ApiResponseService::successResponse(
+            data: $hotels
+        );
     }
 }
