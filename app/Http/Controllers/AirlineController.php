@@ -85,7 +85,7 @@ class AirlineController extends Controller
         ]);
     }
 
-    public function bookFlight( $scheduleId)
+    public function bookFlight($scheduleId)
     {
         $schedule = FlightSchedule::findOrFail($scheduleId);
 
@@ -98,5 +98,32 @@ class AirlineController extends Controller
             'success' => true,
             'data' => $booking
         ]);
+    }
+
+    public function dropList(Request $request)
+    {
+        $request->validate([
+            'country_id' => 'required|exists:countries,id',
+            'city_id'    => 'required|exists:cities,id',
+        ]);
+
+        $airlines = Airline::whereHas('flights', function ($q) use ($request) {
+            $q->where(function ($q) use ($request) {
+                $q->where('from_city_id', $request->city_id)
+                    ->orWhere('to_city_id', $request->city_id);
+            });
+        })
+            ->with([
+                'flights' => function ($q) use ($request) {
+                    $q->where(function ($q) use ($request) {
+                        $q->where('from_city_id', $request->city_id)
+                            ->orWhere('to_city_id', $request->city_id);
+                    })
+                        ->with(['fromCity', 'toCity']);
+                }
+            ])
+            ->get();
+
+        return response()->json($airlines);
     }
 }
