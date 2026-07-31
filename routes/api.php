@@ -27,7 +27,7 @@ Route::middleware('auth:api')->group(function () {
     Route::get('/restaurants-drop-list', [RestaurantController::class, 'dropList']);
     Route::get('/airlines-drop-list', [AirlineController::class, 'dropList']);
 
-    Route::get('/package-hint', [PackageController::class, 'hint']);
+    Route::post('/package-hint', [PackageController::class, 'hint']);
 
 });
 

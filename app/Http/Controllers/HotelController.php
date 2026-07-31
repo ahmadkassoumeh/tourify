@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use App\Services\BookRoomService;
 use App\Models\Hotel;
 use App\Models\City;
+use App\Http\Resources\HotelResource;
 use App\Utilities\ApiResponseService;
 use Illuminate\Validation\ValidationException;
 use App\Models\HotelRoom;
@@ -117,33 +118,23 @@ class HotelController extends Controller
             ->where('country_id', $request->country_id)
             ->first();
 
-        if (!$city) {
+        if (! $city) {
             throw ValidationException::withMessages([
                 'city_id' => 'The selected city does not belong to the selected country.',
             ]);
         }
 
-        $hotels = Hotel::with('rooms')
+        $hotels = Hotel::with([
+            'city.country',
+            'images',
+            'rooms',
+        ])
             ->where('city_id', $city->id)
-            ->get()
-            ->map(function ($hotel) {
-
-                return [
-
-                    'id' => $hotel->id,
-
-                    'name' => $hotel->name,
-
-                    'room_types' => $hotel->rooms
-                        ->pluck('type')
-                        ->unique()
-                        ->values(),
-
-                ];
-            });
+            ->orderBy('name')
+            ->get();
 
         return ApiResponseService::successResponse(
-            data: $hotels
+            data: HotelResource::collection($hotels)
         );
     }
 }

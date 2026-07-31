@@ -6,6 +6,7 @@ use App\Models\Restaurant;
 use App\Services\RatingService;
 use App\Services\FavoriteService;
 use App\Utilities\ApiResponseService;
+use App\Http\Resources\RestaurantResource;
 use App\Models\City;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Http\Request;
@@ -87,20 +88,22 @@ class RestaurantController extends Controller
             ->where('country_id', $request->country_id)
             ->first();
 
-        if (!$city) {
+        if (! $city) {
             throw ValidationException::withMessages([
                 'city_id' => 'The selected city does not belong to the selected country.',
             ]);
         }
 
-        $restaurants = Restaurant::where('city_id', $city->id)
-            ->select('id', 'name')
+        $restaurants = Restaurant::with([
+            'city.country',
+            'images',
+        ])
+            ->where('city_id', $city->id)
             ->orderBy('name')
             ->get();
 
         return ApiResponseService::successResponse(
-            data: $restaurants
+            data: RestaurantResource::collection($restaurants)
         );
     }
-
 }

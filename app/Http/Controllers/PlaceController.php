@@ -8,6 +8,7 @@ use App\Services\RatingService;
 use App\Services\FavoriteService;
 use Illuminate\Validation\ValidationException;
 use App\Models\City;
+use App\Http\Resources\PlaceResource;
 use App\Utilities\ApiResponseService;
 use Illuminate\Http\Request;
 
@@ -88,19 +89,22 @@ class PlaceController extends Controller
             ->where('country_id', $request->country_id)
             ->first();
 
-        if (!$city) {
+        if (! $city) {
             throw ValidationException::withMessages([
                 'city_id' => 'The selected city does not belong to the selected country.',
             ]);
         }
 
-        $places = Place::where('city_id', $city->id)
-            ->select('id', 'name')
+        $places = Place::with([
+            'city.country',
+            'images',
+        ])
+            ->where('city_id', $city->id)
             ->orderBy('name')
             ->get();
 
         return ApiResponseService::successResponse(
-            data: $places
+            data: PlaceResource::collection($places)
         );
     }
 }

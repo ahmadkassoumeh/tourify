@@ -23,6 +23,14 @@ class HotelResource extends JsonResource
                 $this->whenLoaded('city')
             ),
 
+            'room_types' => $this->whenLoaded(
+                'rooms',
+                fn() => $this->rooms
+                    ->pluck('type')
+                    ->unique()
+                    ->values()
+            ),
+
             'images' => $this->images->map(function ($image) {
 
                 return [
