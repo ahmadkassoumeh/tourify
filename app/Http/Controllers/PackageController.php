@@ -4,6 +4,9 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Http\Requests\StorePackageRequest;
+use App\Models\Country;
+use App\Utilities\ApiResponseService;
+use App\Http\Resources\CountryResource;
 use App\Services\PackageService;
 
 class PackageController extends Controller
@@ -21,5 +24,16 @@ class PackageController extends Controller
     {
         $data = $request->all();
         return $this->packageService->hint($data);
+    }
+
+    public function country()
+    {
+        $countries = Country::with('cities')
+            ->orderBy('name')
+            ->get();
+
+        return ApiResponseService::successResponse(
+            data: CountryResource::collection($countries)
+        );
     }
 }

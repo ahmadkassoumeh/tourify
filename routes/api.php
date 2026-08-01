@@ -20,14 +20,17 @@ Route::post('login', [AuthController::class, 'login']);
 
 Route::middleware('auth:api')->group(function () {
 
-    Route::post('/packages', [PackageController::class, 'store']);
+//! Route for create package case : 
 
+    Route::post('/packages', [PackageController::class, 'store']);
     Route::get('/places-drop-list', [PlaceController::class, 'dropList']);
     Route::get('/hotels-drop-list', [HotelController::class, 'dropList']);
     Route::get('/restaurants-drop-list', [RestaurantController::class, 'dropList']);
     Route::get('/airlines-drop-list', [AirlineController::class, 'dropList']);
-
     Route::post('/package-hint', [PackageController::class, 'hint']);
+//!
+
+    Route::get('/country',[PackageController::class,'country']);
 
 });
 

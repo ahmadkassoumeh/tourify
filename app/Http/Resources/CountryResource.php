@@ -24,6 +24,10 @@ class CountryResource extends JsonResource
                 'storage/country/' . $this->flag
             ),
 
+            'cities' => CityResource::collection(
+                $this->whenLoaded('cities')
+            ),
+
         ];
     }
 }
