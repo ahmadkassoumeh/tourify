@@ -25,11 +25,18 @@ class HotelController extends Controller
 
     public function index()
     {
+        $userId = auth()->id();
         $hotel = Hotel::with(['images' => function ($query) {
             $query->where('is_main', true);
         }])
             ->withAvg('ratings as average_rating', 'rating')
-            ->get();
+            ->get()        
+            ->map(function ($hotel) use ($userId) {
+            $hotel->is_favorite = $hotel->favorites()
+                ->where('user_id', $userId)
+                ->exists();
+            return $hotel;
+        });;
 
         return response()->json([
             'success' => true,
@@ -39,13 +46,20 @@ class HotelController extends Controller
 
     public function show($id)
     {
-        $hotel = Hotel::with('images')
+        $userId = auth()->id();
+        $hotel = Hotel::with('images','rooms')
             ->withAvg('ratings as average_rating', 'rating')
+            ->withExists([
+            'favorites as is_favorite' => function ($query) use ($userId) {
+                $query->where('user_id', $userId);
+            }
+            ])
             ->findOrFail($id);
+
 
         return response()->json([
             'success' => true,
-            'data' => $hotel
+            'data' => $hotel,
         ]);
     }
 

@@ -20,8 +20,17 @@ class AirlineController extends Controller
 
     public function index()
     {
+        $userId = auth()->id();
         $airlines = Airline::withAvg('ratings as average_rating', 'rating')
-            ->get();
+        ->get()
+        ->map(function ($airline) use ($userId) {
+
+            $airline->is_favorite = $airline->favorites()
+                ->where('user_id', $userId)
+                ->exists();
+
+            return $airline;
+        });
 
         return response()->json([
             'success' => true,
