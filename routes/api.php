@@ -9,7 +9,7 @@ use App\Http\Controllers\RestaurantController;
 use App\Http\Controllers\AirlineController;
 use App\Http\Controllers\HotelController;
 use App\Http\Controllers\DashboardController;
-
+use App\Http\Controllers\AgencyController;
 Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:api');
@@ -72,4 +72,9 @@ Route::middleware('auth:api')->group(function () {
     Route::post('/hotels/{id}/rate', [HotelController::class, 'rate']);
     Route::post('/hotels/{id}/favorite', [HotelController::class, 'toggleFavorite']);
     Route::post('/rooms/{id}/book', [HotelController::class, 'bookRoom']);
+
+    Route::get('/agencies', [AgencyController::class, 'index']);
+    Route::get('/agencies/{id}', [AgencyController::class, 'show']);
+    Route::post('/agencies/{id}/rate', [AgencyController::class, 'rate']);
+    Route::post('/agencies/{id}/favorite', [AgencyController::class, 'toggleFavorite']);
 });
