@@ -20,11 +20,18 @@ class RestaurantController extends Controller
 
     public function index()
     {
+        $userId = auth()->id();
         $restaurants = Restaurant::with(['images' => function ($query) {
             $query->where('is_main', true);
         }])
             ->withAvg('ratings as average_rating', 'rating')
-            ->get();
+            ->get()
+            ->map(function ($restaurants) use ($userId) {
+            $restaurants->is_favorite = $restaurants->favorites()
+                ->where('user_id', $userId)
+                ->exists();
+            return $restaurants;
+        });;
 
         return response()->json([
             'success' => true,
@@ -34,8 +41,14 @@ class RestaurantController extends Controller
 
     public function show($id)
     {
+        $userId = auth()->id();
         $restaurant = Restaurant::with('images')
             ->withAvg('ratings as average_rating', 'rating')
+            ->withExists([
+            'favorites as is_favorite' => function ($query) use ($userId) {
+                $query->where('user_id', $userId);
+            }
+            ])
             ->findOrFail($id);
 
         return response()->json([

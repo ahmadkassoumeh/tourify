@@ -21,11 +21,18 @@ class PlaceController extends Controller
 
     public function index()
     {
+        $userId = auth()->id();
         $places = Place::with(['images' => function ($query) {
             $query->where('is_main', true);
         }])
             ->withAvg('ratings as average_rating', 'rating')
-            ->get();
+            ->get()
+            ->map(function ($place) use ($userId) {
+            $place->is_favorite = $place->favorites()
+                ->where('user_id', $userId)
+                ->exists();
+            return $place;
+        });;
 
         return response()->json([
             'success' => true,
@@ -35,8 +42,14 @@ class PlaceController extends Controller
 
     public function show($id)
     {
+        $userId = auth()->id();
         $place = Place::with('images')
             ->withAvg('ratings as average_rating', 'rating')
+            ->withExists([
+            'favorites as is_favorite' => function ($query) use ($userId) {
+                $query->where('user_id', $userId);
+            }
+            ])
             ->findOrFail($id);
 
         return response()->json([

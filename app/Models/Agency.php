@@ -1,7 +1,7 @@
 <?php
 
 namespace App\Models;
-
+use App\Models\Favorite;
 use Illuminate\Database\Eloquent\Model;
 
 class Agency extends Model
@@ -33,5 +33,10 @@ class Agency extends Model
     public function ratings()
     {
         return $this->morphMany(Rating::class, 'rateable');
+    }
+
+    public function favorites()
+    {
+        return $this->morphMany(Favorite::class, 'favoriteable');
     }
 }
