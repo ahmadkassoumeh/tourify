@@ -9,6 +9,8 @@ use App\Http\Controllers\RestaurantController;
 use App\Http\Controllers\AirlineController;
 use App\Http\Controllers\HotelController;
 use App\Http\Controllers\DashboardController;
+use Spatie\Permission\Middleware\RoleMiddleware;
+use App\Http\Controllers\BookPackageController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -31,6 +33,12 @@ Route::middleware('auth:api')->group(function () {
 //!
 
     Route::get('/country',[PackageController::class,'country']);
+
+    //^ زبون يحجز
+    Route::post(
+        '/packages/book',
+        [BookPackageController::class, 'store']
+    )->middleware(RoleMiddleware::class . ':user');
 
 });
 

@@ -22,19 +22,18 @@ use App\Http\Resources\PackageResource;
 use Illuminate\Validation\ValidationException;
 
 
-class PackageService
+class BookPackageService
 {
     // وقت زبون يشتري الباقة
     public function bookPackage(Package $package, User $customer): void
     {
         DB::transaction(function () use ($package, $customer) {
 
-            // 1. تحقق إنو في مقاعد متاحة
+            // 1. تحقق من عدد الباقات المباعة
             $soldCount = Booking::where('bookable_type', Package::class)
                 ->where('bookable_id', $package->id)
                 ->whereIn('status', ['pending', 'confirmed'])
                 ->count();
-
 
             if ($soldCount >= $package->quantity) {
                 throw ValidationException::withMessages([
@@ -42,60 +41,87 @@ class PackageService
                 ]);
             }
 
-            // 2. أنشئ الـ parent booking (Package)
-            $packageBooking = Booking::create([
-                'user_id'          => $customer->id,
-                'bookable_type'    => Package::class,
-                'bookable_id'      => $package->id,
-                'booking_date'     => $package->days->first()->date,
-                'status'           => 'pending',
-                'package_booking_id' => null,
-            ]);
-
-            // 3. أضف children للفندق لكل يوم
-            foreach ($package->days as $day) {
-
-                $hotel = $day->items
-                    ->first(fn($i) => $i->itemable instanceof Hotel);
-
-                if ($hotel) {
-                    Booking::create([
-                        'user_id'            => $customer->id,
-                        'bookable_type'      => HotelRoom::class,
-                        'bookable_id'        => $this->assignRoom($hotel, $day),
-                        'booking_date'       => $day->date,
-                        'status'             => 'pending',
-                        'package_booking_id' => $packageBooking->id,
-                    ]);
-                }
-
-                // 4. أضف children للطيران
-                $flight = $day->items
-                    ->first(fn($i) => $i->itemable instanceof FlightSchedule);
-
-                if ($flight) {
-                    Booking::create([
-                        'user_id'            => $customer->id,
-                        'bookable_type'      => FlightSchedule::class,
-                        'bookable_id'        => $flight->itemable->id,
-                        'booking_date'       => $day->date,
-                        'status'             => 'pending',
-                        'package_booking_id' => $packageBooking->id,
-                    ]);
-                }
-            }
-
-            // 5. اقتطع من محفظة الزبون
+            // 2. تحقق من رصيد الزبون
             if ($customer->credit < $package->price) {
                 throw ValidationException::withMessages([
                     'wallet' => 'Insufficient balance.'
                 ]);
             }
 
-            $customer->decrement('credit', $package->price);
+            // 3. أنشئ Parent Booking للباقة
+            $packageBooking = Booking::create([
+                'user_id'             => $customer->id,
+                'bookable_type'       => Package::class,
+                'bookable_id'         => $package->id,
+                'booking_date'        => $package->days->first()->date,
+                'status'               => 'pending',
+                'package_booking_id' => null,
+            ]);
 
-            // 6. أضف للمكتب
-            $package->agency->user->increment('credit', $package->price);
+            // 4. لكل يوم
+            foreach ($package->days as $day) {
+
+
+                /*
+            |--------------------------------------------------------------------------
+            | Hotel
+            |--------------------------------------------------------------------------
+            */
+
+                $hotel = $day->items
+                    ->first(
+                        fn($item) => $item->itemable instanceof Hotel
+                    );
+                // dd($hotel->toArray());
+
+                if ($hotel) {
+
+                    $this->assignAgencyRoomToCustomer(
+                        packageBooking: $packageBooking,
+                        hotelItem: $hotel,
+                        day: $day,
+                        customer: $customer,
+                        package: $package,
+                    );
+                }
+
+                /*
+            |--------------------------------------------------------------------------
+            | Flight
+            |--------------------------------------------------------------------------
+            */
+
+                $flight = $day->items
+                    ->first(fn($i) => $i->itemable instanceof FlightSchedule);
+
+                if ($flight) {
+
+                    $roomType = $package->room_type;
+
+                    $this->assignFlightTickets(
+                        $flight,
+                        $day,
+                        $roomType,
+                        $packageBooking,
+                        $package->agency->user_id,
+                        $package
+                    );
+                }
+            }
+
+            // 5. اقتطع سعر الباقة من الزبون
+            $customer->decrement(
+                'credit',
+                $package->price
+            );
+
+            // 6. أضف السعر إلى محفظة المكتب
+            $package->agency
+                ->user
+                ->increment(
+                    'credit',
+                    $package->price
+                );
         });
     }
 
@@ -104,47 +130,119 @@ class PackageService
     //*********************************************************** *****************************************************************/
 
 
-    private function assignRoom(PackageDayItem $hotelItem, PackageDay $day): int
-    {
+    private function assignAgencyRoomToCustomer(
+        Booking $packageBooking,
+        PackageDayItem $hotelItem,
+        PackageDay $day,
+        User $customer,
+        Package $package,
+
+    ): void {
+
         $hotel = $hotelItem->itemable;
 
-        // جيب IDs الغرف اللي المكتب حجزها بهاد الفندق وهاد التاريخ
-        $agencyRoomIds = Booking::where('bookable_type', HotelRoom::class)
+        /*
+    |--------------------------------------------------------------------------
+    | جيب حجوزات الغرف التي حجزها المكتب مسبقاً
+    |--------------------------------------------------------------------------
+    */
+
+        $agencyBooking = Booking::where(
+            'bookable_type',
+            HotelRoom::class
+        )
+            ->where('package_id', $package->id)
+            ->where(
+                'booking_date',
+                $day->date
+            )
+            ->where(
+                'status',
+                'agency'
+            )
+            ->whereHasMorph(
+                'bookable',
+                [HotelRoom::class],
+                function ($query) use ($hotel) {
+                    $query->where('hotel_id', $hotel->id);
+                }
+            )
+            ->first();
+
+        if (!$agencyBooking) {
+
+            throw ValidationException::withMessages([
+                'hotel' =>
+                "No available agency room for hotel {$hotel->id} on {$day->date}."
+            ]);
+        }
+
+        /*
+    |--------------------------------------------------------------------------
+    | حول حجز المكتب إلى حجز الزبون
+    |--------------------------------------------------------------------------
+    */
+
+        $agencyBooking->update([
+            'user_id'             => $customer->id,
+            'status'              => 'pending',
+            'package_booking_id' => $packageBooking->id,
+        ]);
+    }
+
+
+    private function assignFlightTickets(
+        PackageDayItem $flightItem,
+        PackageDay $day,
+        string $roomType,
+        Booking $packageBooking,
+        int $agencyUserId,
+        Package $package
+
+    ): void {
+
+        $ticketsCount = match ($roomType) {
+            'A' => 4,
+            'B' => 3,
+            'C' => 2,
+            'D' => 1,
+            default => throw ValidationException::withMessages([
+                'room_type' => 'Invalid room type.'
+            ]),
+        };
+
+        $flightSchedule = $flightItem->itemable;
+
+        $agencyBookings = Booking::where(
+            'bookable_type',
+            FlightSchedule::class
+        )
+            ->where(
+                'bookable_id',
+                $flightSchedule->id
+            )
             ->where('booking_date', $day->date)
             ->where('status', 'agency')
-            ->pluck('bookable_id');
+            ->where('user_id', $agencyUserId)
+            ->where('package_id', $package->id)
+            ->lockForUpdate()
+            ->take($ticketsCount)
+            ->get();
 
-        // تحقق إنها فعلاً من هاد الفندق وجيب النوع
-        $agencyRoom = HotelRoom::where('hotel_id', $hotel->id)
-            ->whereIn('id', $agencyRoomIds)
-            ->first();
+        if ($agencyBookings->count() < $ticketsCount) {
 
-        if (!$agencyRoom) {
             throw ValidationException::withMessages([
-                'hotel' => "No agency reservation found for hotel {$hotel->id}."
+                'flight' => "Not enough agency tickets available."
             ]);
         }
 
-        $roomType = $agencyRoom->type;
+        foreach ($agencyBookings as $booking) {
 
-        // الغرف المحجوزة بأي status بهاد التاريخ
-        $reservedRoomIds = Booking::where('bookable_type', HotelRoom::class)
-            ->where('booking_date', $day->date)
-            ->whereIn('status', ['agency', 'pending', 'confirmed'])
-            ->pluck('bookable_id');
-
-        // أول غرفة متاحة من نفس النوع
-        $room = HotelRoom::where('hotel_id', $hotel->id)
-            ->where('type', $roomType)
-            ->whereNotIn('id', $reservedRoomIds)
-            ->first();
-
-        if (!$room) {
-            throw ValidationException::withMessages([
-                'hotel' => "No available rooms in hotel {$hotel->id} on {$day->date}."
+            $booking->update([
+                'user_id' => $packageBooking->user_id,
+                'status' => 'pending',
+                'package_booking_id' => $packageBooking->id,
             ]);
         }
-
-        return $room->id;
     }
 }

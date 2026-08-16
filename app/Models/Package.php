@@ -22,6 +22,8 @@ class Package extends Model
 
         'price',
 
+        'room_type',
+
     ];
 
     public function agency()

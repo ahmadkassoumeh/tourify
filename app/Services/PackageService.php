@@ -24,6 +24,8 @@ use Illuminate\Validation\ValidationException;
 
 class PackageService
 {
+        private ?int $packageId = null;
+
     private function validateSameRoomType(array $data): void
     {
         $roomTypes = collect($data['days'])
@@ -196,6 +198,8 @@ class PackageService
 
             $package = $this->createPackage($data);
 
+            $this->packageId = $package->id;
+
             $this->createPackageDays(
                 $package,
                 $data
@@ -243,6 +247,8 @@ class PackageService
             'number_of_days' => count($data['days']),
 
             'quantity' => $data['quantity'],
+
+            'room_type' => $data['days'][0]['room_type'] ?? null,
 
             'price' => $data['price'],
 
@@ -390,6 +396,8 @@ class PackageService
 
                 'status' => 'agency',
 
+                'package_id' => $this->packageId,
+
                 'package_booking_id' => null,
 
             ]);
@@ -462,6 +470,8 @@ class PackageService
                 'booking_date' => $day->date,
 
                 'status' => 'agency',
+
+                'package_id' => $this->packageId,
 
                 'package_booking_id' => null,
 

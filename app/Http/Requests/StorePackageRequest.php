@@ -28,7 +28,7 @@ class StorePackageRequest extends FormRequest
     {
         return [
 
-            'name' => 'required|string|max:255',
+            'name' => 'required|string|max:255|unique:packages,name',
 
             'country_id' => 'required|exists:countries,id',
 
@@ -55,43 +55,43 @@ class StorePackageRequest extends FormRequest
         ];
     }
 
-    // public function withValidator($validator): void
-    // {
-    //     $validator->after(function ($validator) {
+    public function withValidator($validator): void
+    {
+        $validator->after(function ($validator) {
 
-    //         $countryId = $this->country_id;
+            $countryId = $this->country_id;
 
-    //         foreach ($this->days as $index => $day) {
+            foreach ($this->days as $index => $day) {
 
-    //             $hotel = Hotel::find($day['hotel_id']);
-    //             $restaurant = Restaurant::find($day['restaurant_id']);
-    //             $place = Place::find($day['place_id']);
+                $hotel = Hotel::find($day['hotel_id']);
+                $restaurant = Restaurant::find($day['restaurant_id']);
+                $place = Place::find($day['place_id']);
 
-    //             // جميع العناصر يجب أن تنتمي لنفس المدينة
-    //             if (
-    //                 $hotel->city_id != $restaurant->city_id ||
-    //                 $hotel->city_id != $place->city_id
-    //             ) {
-    //                 $validator->errors()->add(
-    //                     "days.$index",
-    //                     "Hotel, restaurant and place must belong to the same city."
-    //                 );
+                // جميع العناصر يجب أن تنتمي لنفس المدينة
+                if (
+                    $hotel->city_id != $restaurant->city_id ||
+                    $hotel->city_id != $place->city_id
+                ) {
+                    $validator->errors()->add(
+                        "days.$index",
+                        "Hotel, restaurant and place must belong to the same city."
+                    );
 
-    //                 continue;
-    //             }
+                    continue;
+                }
 
-    //             // المدينة يجب أن تنتمي للدولة المختارة
-    //             $city = City::find($hotel->city_id);
+                // المدينة يجب أن تنتمي للدولة المختارة
+                $city = City::find($hotel->city_id);
 
-    //             if ($city->country_id != $countryId) {
+                if ($city->country_id != $countryId) {
 
-    //                 $validator->errors()->add(
-    //                     "days.$index",
-    //                     "Selected data does not belong to the selected country."
-    //                 );
-    //             }
-    //         }
-    //     });
-    // }
+                    $validator->errors()->add(
+                        "days.$index",
+                        "Selected data does not belong to the selected country."
+                    );
+                }
+            }
+        });
+    }
 
 }

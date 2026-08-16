@@ -108,6 +108,7 @@ class AirlineController extends Controller
         ]);
 
         $airlines = Airline::whereHas('flights', function ($q) use ($request) {
+
             $q->where(function ($q) use ($request) {
                 $q->where('from_city_id', $request->city_id)
                     ->orWhere('to_city_id', $request->city_id);
@@ -115,11 +116,16 @@ class AirlineController extends Controller
         })
             ->with([
                 'flights' => function ($q) use ($request) {
+
                     $q->where(function ($q) use ($request) {
                         $q->where('from_city_id', $request->city_id)
                             ->orWhere('to_city_id', $request->city_id);
                     })
-                        ->with(['fromCity', 'toCity']);
+                        ->with([
+                            'fromCity',
+                            'toCity',
+                            'schedules',
+                        ]);
                 }
             ])
             ->get();
