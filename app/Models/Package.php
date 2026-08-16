@@ -40,4 +40,13 @@ class Package extends Model
     {
         return $this->hasMany(PackageDay::class);
     }
+
+    public function bookings()
+    {
+        return $this->morphMany(
+            Booking::class,
+            'bookable'
+        );
+    }
+    
 }

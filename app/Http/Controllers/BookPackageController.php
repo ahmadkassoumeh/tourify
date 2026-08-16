@@ -6,6 +6,7 @@ use App\Models\Booking;
 use App\Services\BookPackageService;
 use Illuminate\Http\Request;
 use App\Models\Package;
+use App\Models\Agency;
 use App\Utilities\ApiResponseService;
 
 class BookPackageController extends Controller
@@ -38,4 +39,65 @@ class BookPackageController extends Controller
         );
     }
 
+    public function activePackages()
+    {
+        $packages = $this->bookPackageService->activePackages(
+            auth()->user()
+        );
+
+        return ApiResponseService::successResponse(
+            data: $packages
+        );
+    }
+
+    public function pendingBookings(Package $package)
+    {
+        return $this->bookPackageService->pendingBookings($package);
+    }
+
+    public function approve(
+        Package $package,
+        Booking $booking
+    ) {
+
+        $agency = Agency::where('user_id', auth()->user()->id)->first();
+
+        if (!$agency || $package->agency_id !== $agency->id) {
+            return ApiResponseService::unauthorizedResponse(
+                msg: 'You are not authorized to manage this package.'
+            );
+        }
+
+        $this->bookPackageService->approveBooking(
+            $package,
+            $booking
+        );
+
+        return ApiResponseService::successResponse(
+            msg: 'Booking approved successfully.'
+        );
+    }
+
+    public function reject(
+        Package $package,
+        Booking $booking
+    ) {
+
+        $agency = Agency::where('user_id', auth()->user()->id)->first();
+
+        if (!$agency || $package->agency_id !== $agency->id) {
+            return ApiResponseService::unauthorizedResponse(
+                msg: 'You are not authorized to manage this package.'
+            );
+        }
+
+        $this->bookPackageService->rejectBooking(
+            $package,
+            $booking
+        );
+
+        return ApiResponseService::successResponse(
+            msg: 'Booking rejected successfully.'
+        );
+    }
 }

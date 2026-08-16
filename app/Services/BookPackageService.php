@@ -20,6 +20,7 @@ use App\Models\City;
 use App\Utilities\ApiResponseService;
 use App\Http\Resources\PackageResource;
 use Illuminate\Validation\ValidationException;
+use App\Http\Resources\BookingResource;
 
 
 class BookPackageService
@@ -245,4 +246,180 @@ class BookPackageService
             ]);
         }
     }
+
+    ////&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+
+    public function activePackages(User $agencyUser)
+    {
+        $packages = Package::query()
+            ->whereHas('agency', function ($query) use ($agencyUser) {
+                $query->where('user_id', $agencyUser->id);
+            })
+            ->whereHas('days', function ($query) {
+                $query->where('date', '>=', today());
+            })
+            ->with([
+                'country',
+                'days.items.itemable',
+            ])
+            ->withCount([
+                'bookings as pending_count' => function ($query) {
+                    $query->where('bookable_type', Package::class)
+                        ->where('status', 'pending');
+                },
+
+                'bookings as confirmed_count' => function ($query) {
+                    $query->where('bookable_type', Package::class)
+                        ->where('status', 'confirmed');
+                },
+            ])
+            ->get();
+
+        return $packages->map(function ($package) {
+
+            $availableCount = $package->quantity - $package->confirmed_count;
+
+            return [
+                'package' => $package,
+                'quantity' => $package->quantity,
+                'pending_count' => $package->pending_count,
+                'confirmed_count' => $package->confirmed_count,
+                'available_count' => $availableCount,
+            ];
+        });
+    }
+
+    public function pendingBookings(Package $package)
+    {
+        $agency = Agency::where('user_id', auth()->user()->id)->first();
+
+        if (!$agency || $package->agency_id !== $agency->id) {
+            return ApiResponseService::unauthorizedResponse(
+                msg: 'You are not authorized to access this package.'
+            );
+        }
+        $bookings = Booking::with('user')
+            ->where('bookable_type', Package::class)
+            ->where('bookable_id', $package->id)
+            ->where('status', 'pending')
+            ->latest()
+            ->get();
+
+        return ApiResponseService::successResponse(
+            data: BookingResource::collection($bookings)
+        );
+    }
+
+    public function approveBooking(
+        Package $package,
+        Booking $packageBooking
+    ): void {
+
+        DB::transaction(function () use ($package, $packageBooking) {
+
+            // تأكد أن الطلب فعلاً تابع لهذه الباقة
+            if (
+                $packageBooking->bookable_type !== Package::class ||
+                $packageBooking->bookable_id !== $package->id
+            ) {
+                throw ValidationException::withMessages([
+                    'booking' => 'This booking does not belong to this package.'
+                ]);
+            }
+
+            // فقط الطلبات المعلقة يمكن قبولها
+            if ($packageBooking->status !== 'pending') {
+                throw ValidationException::withMessages([
+                    'booking' => 'This booking is not pending.'
+                ]);
+            }
+
+            // نجيب كل حجوزات الفندق والطيران الخاصة بهذا الزبون
+            $children = Booking::where(
+                'package_booking_id',
+                $packageBooking->id
+            )
+                ->whereIn('bookable_type', [
+                    HotelRoom::class,
+                    FlightSchedule::class,
+                ])
+                ->lockForUpdate()
+                ->get();
+
+            // حول الـ Parent إلى confirmed
+            $packageBooking->update([
+                'status' => 'confirmed',
+            ]);
+
+            // وحول كل العناصر التابعة له
+            $children->each(function (Booking $booking) {
+                $booking->update([
+                    'status' => 'confirmed',
+                ]);
+            });
+        });
+    }
+
+    public function rejectBooking(
+        Package $package,
+        Booking $packageBooking
+    ): void {
+
+        DB::transaction(function () use ($package, $packageBooking) {
+
+            // تأكد أن الحجز تابع لهذه الباقة
+            if (
+                $packageBooking->bookable_type !== Package::class ||
+                $packageBooking->bookable_id !== $package->id
+            ) {
+                throw ValidationException::withMessages([
+                    'booking' => 'This booking does not belong to this package.'
+                ]);
+            }
+
+            // فقط الطلبات المعلقة يمكن رفضها
+            if ($packageBooking->status !== 'pending') {
+                throw ValidationException::withMessages([
+                    'booking' => 'This booking is not pending.'
+                ]);
+            }
+
+            // جيب كل حجوزات الفندق والطيران الخاصة بالزبون
+            $children = Booking::where(
+                'package_booking_id',
+                $packageBooking->id
+            )
+                ->whereIn('bookable_type', [
+                    HotelRoom::class,
+                    FlightSchedule::class,
+                ])
+                ->lockForUpdate()
+                ->get();
+
+            // رفض الـ Parent
+            $packageBooking->update([
+                'status' => 'rejected',
+            ]);
+
+            // رفض كل العناصر التابعة
+            $children->each(function (Booking $booking) {
+                $booking->update([
+                    'status' => 'rejected',
+                ]);
+            });
+
+            // إعادة المبلغ للزبون
+            $packageBooking->user->increment(
+                'credit',
+                $package->price
+            );
+
+            // وطرح المبلغ من رصيد المكتب
+            $package->agency->user->decrement(
+                'credit',
+                $package->price
+            );
+        });
+    }
+    
 }

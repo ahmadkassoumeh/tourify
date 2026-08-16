@@ -42,6 +42,26 @@ Route::middleware('auth:api')->group(function () {
         [BookPackageController::class, 'store']
     )->middleware(RoleMiddleware::class . ':user');
 
+    Route::get(
+        '/agency/packages/active',
+        [BookPackageController::class, 'activePackages']
+    );
+
+    Route::get(
+        '/agencies/packages/{package}/bookings/pending',
+        [BookPackageController::class, 'pendingBookings']
+    );
+
+    Route::post(
+        '/agencies/packages/{package}/bookings/{booking}/approve',
+        [BookPackageController::class, 'approve']
+    );
+
+    Route::post(
+        '/agencies/packages/{package}/bookings/{booking}/reject',
+        [BookPackageController::class, 'reject']
+    );
+
 });
 
 

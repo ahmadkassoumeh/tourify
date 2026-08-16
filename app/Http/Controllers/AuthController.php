@@ -172,7 +172,7 @@ class AuthController extends Controller
         }
 
         // 👈 هون المهم
-        if ($user->status !== UserStatusEnum::APPROVED->value) {
+        if ($user->status !== UserStatusEnum::APPROVED) {
             return ApiResponseService::unauthorizedResponse(
                 msg: 'الحساب بانتظار موافقة الإدارة'
             );
