@@ -88,6 +88,49 @@ class DashboardController extends Controller
         ]);
     }
 
+    public function search(Request $request)
+{
+    $search = $request->query('search');
+
+    if (!$search) {
+        return response()->json([
+            'success' => false,
+            'message' => 'يرجى إدخال كلمة البحث'
+        ], 422);
+    }
+
+    $places = Place::where('name', 'LIKE', "%{$search}%")
+        ->latest()
+        ->get();
+
+    $restaurants = Restaurant::where('name', 'LIKE', "%{$search}%")
+        ->latest()
+        ->get();
+
+    $hotels = Hotel::where('name', 'LIKE', "%{$search}%")
+        ->latest()
+        ->get();
+
+    $agencies = Agency::where('name', 'LIKE', "%{$search}%")
+        ->latest()
+        ->get();
+
+    $airlines = Airline::where('name', 'LIKE', "%{$search}%")
+        ->latest()
+        ->get();
+
+    return response()->json([
+        'success' => true,
+        'data' => [
+            'places' => $places,
+            'restaurants' => $restaurants,
+            'hotels' => $hotels,
+            'agencies' => $agencies,
+            'airlines' => $airlines,
+        ]
+    ]);
+}
+
     public function getfavorites(Request $request)
     {
         $user = $request->user();

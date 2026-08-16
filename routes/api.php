@@ -10,6 +10,8 @@ use App\Http\Controllers\AirlineController;
 use App\Http\Controllers\HotelController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\AgencyController;
+use App\Http\Controllers\ProfileController;
+
 Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:api');
@@ -46,7 +48,11 @@ Route::middleware('auth:api')->group(function () {
 $sample = 1;
 
 Route::middleware('auth:api')->group(function () {
+    Route::get('/profile', [ProfileController::class, 'show']);
+    Route::put('/profile', [ProfileController::class, 'update']);
+
     Route::get('/dashboard', [DashboardController::class, 'index']);
+    Route::get('/dashboard/search', [DashboardController::class, 'search']);
     Route::get('/dashboard/favorites', [DashboardController::class, 'getfavorites']);
     Route::get('/dashboard/bookings', [DashboardController::class, 'getbookings']);
 
