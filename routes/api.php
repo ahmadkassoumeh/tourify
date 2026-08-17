@@ -62,6 +62,11 @@ Route::middleware('auth:api')->group(function () {
         [BookPackageController::class, 'reject']
     );
 
+    Route::delete(
+        '/packages/{package}/bookings/{booking}/cancel',
+        [BookPackageController::class, 'cancel']
+    );
+
 });
 
 

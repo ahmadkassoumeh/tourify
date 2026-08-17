@@ -100,4 +100,20 @@ class BookPackageController extends Controller
             msg: 'Booking rejected successfully.'
         );
     }
+
+    public function cancel(
+        Package $package,
+        Booking $booking
+    ) {
+        $this->bookPackageService->cancelPendingBooking(
+            $package,
+            $booking,
+            auth()->user()
+        );
+
+        return ApiResponseService::successResponse(
+            msg: 'Booking cancelled successfully.'
+        );
+    }
+    
 }

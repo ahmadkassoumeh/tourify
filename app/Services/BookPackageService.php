@@ -421,5 +421,82 @@ class BookPackageService
             );
         });
     }
+
+    //!!!!!!!!!!!!!!! زبزن يلغي 
+
+    public function cancelPendingBooking(
+        Package $package,
+        Booking $packageBooking,
+        User $customer
+    ): void {
+
+        DB::transaction(function () use (
+            $package,
+            $packageBooking,
+            $customer
+        ) {
+
+            // 1. تأكد أن هذا هو Parent Booking للـ Package
+            if (
+                $packageBooking->bookable_type !== Package::class ||
+                $packageBooking->bookable_id !== $package->id
+            ) {
+                throw ValidationException::withMessages([
+                    'booking' => 'This booking does not belong to this package.'
+                ]);
+            }
+
+            // 2. تأكد أن الحجز للزبون الحالي
+            if ($packageBooking->user_id !== $customer->id) {
+                throw ValidationException::withMessages([
+                    'booking' => 'You are not allowed to cancel this booking.'
+                ]);
+            }
+
+            // 3. يمكن الإلغاء فقط إذا كان Pending
+            if ($packageBooking->status !== 'pending') {
+                throw ValidationException::withMessages([
+                    'booking' => 'Only pending bookings can be cancelled.'
+                ]);
+            }
+
+            // 4. جيب كل حجوزات الفندق والطيران التابعة لهذا الطلب
+            $children = Booking::where(
+                'package_booking_id',
+                $packageBooking->id
+            )
+                ->whereIn('bookable_type', [
+                    HotelRoom::class,
+                    FlightSchedule::class,
+                ])
+                ->lockForUpdate()
+                ->get();
+
+            // 5. رجّع حجوزات الفندق والطيران إلى المكتب
+            foreach ($children as $booking) {
+
+                $booking->update([
+                    'user_id' => $package->agency->user_id,
+                    'status' => 'agency',
+                    'package_booking_id' => null,
+                ]);
+            }
+
+            // 6. رجّع مبلغ الباقة للزبون
+            $customer->increment(
+                'credit',
+                $package->price
+            );
+
+            // 7. اطرح المبلغ من محفظة المكتب
+            $package->agency->user->decrement(
+                'credit',
+                $package->price
+            );
+
+            // 8. احذف Parent Booking تبع الـ Package
+            $packageBooking->delete();
+        });
+    }
     
 }
