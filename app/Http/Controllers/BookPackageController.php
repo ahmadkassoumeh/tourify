@@ -101,7 +101,7 @@ class BookPackageController extends Controller
         );
     }
 
-    public function cancel(
+    public function cancel(  // by user 
         Package $package,
         Booking $booking
     ) {
