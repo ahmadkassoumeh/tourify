@@ -44,4 +44,9 @@ class Booking extends Model
             'package_booking_id'
         );
     }
+
+    public function package()
+    {
+        return $this->belongsTo(Package::class);
+    }
 }
