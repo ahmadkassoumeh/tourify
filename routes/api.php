@@ -69,8 +69,7 @@ Route::middleware('auth:api')->group(function () {
 
     Route::get('/all-packages', [PackageController::class, 'allPackages']);
 
-    Route::post('/package/details', [PackageController::class, 'getPackageById']);
-
+    Route::get('/package/{id}/details', [PackageController::class, 'getPackageById']);
 
 });
 

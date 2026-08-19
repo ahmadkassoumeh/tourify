@@ -52,28 +52,23 @@ class PackageController extends Controller
         );
     }
 
-    public function getPackageById(Request $request)
+    public function getPackageById($id)
     {
-        // 1. التحقق من وجود package_id في الـ Body
-        $request->validate([
-            'package_id' => 'required|exists:packages,id'
-        ]);
-
-        // 2. جلب الـ Package مع العلاقات
+        // 1. جلب الـ Package مع العلاقات
         $package = Package::with([
             'agency',
             'country',
             'days'
-        ])->find($request->package_id);
+        ])->find($id);
 
-        // 3. التحقق من وجود الـ Package (تأكيد إضافي)
+        // 2. التحقق من وجود الـ Package
         if (!$package) {
             return response()->json([
                 'message' => 'Package not found'
             ], 404);
         }
 
-        // 4. إرجاع البيانات
+        // 3. إرجاع البيانات
         return new PackageResource($package);
     }
 }
