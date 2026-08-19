@@ -51,4 +51,33 @@ class PackageController extends Controller
             data: PackageResource::collection($packages)
         );
     }
+
+    public function getPackageById(Request $request)
+    {
+        // 1. التحقق من وجود package_id في الـ Body
+        $request->validate([
+            'package_id' => 'required|exists:packages,id'
+        ]);
+
+        // 2. جلب الـ Package مع العلاقات
+        $package = Package::with([
+            'agency',
+            'country',
+            'days'
+        ])->find($request->package_id);
+
+        // 3. التحقق من وجود الـ Package (تأكيد إضافي)
+        if (!$package) {
+            return response()->json([
+                'message' => 'Package not found'
+            ], 404);
+        }
+
+        // 4. إرجاع البيانات
+        return new PackageResource($package);
+    }
 }
+
+
+
+//
