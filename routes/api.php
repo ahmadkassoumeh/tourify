@@ -11,6 +11,7 @@ use App\Http\Controllers\HotelController;
 use App\Http\Controllers\DashboardController;
 use Spatie\Permission\Middleware\RoleMiddleware;
 use App\Http\Controllers\BookPackageController;
+use App\Http\Controllers\FlightScheduleController;
 use App\Http\Controllers\AgencyController;
 use App\Http\Controllers\ProfileController;
 
@@ -71,9 +72,17 @@ Route::middleware('auth:api')->group(function () {
 
     Route::get('/package/{id}/details', [PackageController::class, 'getPackageById']);
 
+    Route::post(
+        '/flight-schedules',
+        [FlightScheduleController::class, 'store']
+    )->middleware(RoleMiddleware::class . ':airline');
+
+    Route::get('/flights/dropdown', [FlightScheduleController::class, 'getFlightsDropdown'])
+    ->middleware(RoleMiddleware::class . ':airline');   
+
+
+
 });
-
-
 
 
 

@@ -23,5 +23,10 @@ class RoleSeeder extends Seeder
             'name' => 'user',
             // 'guard_name' => 'api',
         ]);
+
+        Role::firstOrCreate([
+            'name' => 'airline',
+            // 'guard_name' => 'api',
+        ]);
     }
 }

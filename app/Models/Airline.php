@@ -25,4 +25,9 @@ class Airline extends Model
     {
         return $this->morphMany(Favorite::class, 'favoriteable');
     }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 }
