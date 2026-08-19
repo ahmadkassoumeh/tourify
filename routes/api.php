@@ -67,6 +67,9 @@ Route::middleware('auth:api')->group(function () {
         [BookPackageController::class, 'cancel']
     );
 
+    Route::get('/all-packages', [PackageController::class, 'allPackages']);
+
+
 });
 
 
