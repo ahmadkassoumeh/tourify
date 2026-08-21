@@ -13,22 +13,108 @@ class LoginWebController extends Controller
     // في AdminController
 public function index2(Request $request)
 {
-    $users = User::with('roles')
-        ->orderBy('created_at', 'desc')
-        ->paginate(15);
-    
-    $totalUsers = User::count();
-    $ownersCount = User::role('owner')->count();
-    $tenantsCount = User::role('tenant')->count();
-    $activeUsers = User::where('status', 'active')->count();
-    
-    return view('admin.users.index', compact(
-        'users', 
-        'totalUsers', 
-        'ownersCount', 
-        'tenantsCount', 
-        'activeUsers'
-    ));
+    $query = User::with('roles')
+        ->whereDoesntHave('roles', function ($roleQuery) {
+            $roleQuery->where('name', 'admin');
+        })
+        ->orderBy('created_at', 'desc');
+
+    /*
+    |--------------------------------------------------------------------------
+    | Search
+    |--------------------------------------------------------------------------
+    */
+
+    if ($request->filled('search')) {
+
+        $search = $request->search;
+
+        $query->where(function ($q) use ($search) {
+
+            $q->where('first_name', 'like', "%{$search}%")
+                ->orWhere('last_name', 'like', "%{$search}%")
+                ->orWhere('username', 'like', "%{$search}%")
+                ->orWhere('email', 'like', "%{$search}%")
+                ->orWhere('phone_number', 'like', "%{$search}%");
+
+        });
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Role Filter
+    |--------------------------------------------------------------------------
+    */
+
+    if ($request->filled('role')) {
+
+        $query->whereHas('roles', function ($roleQuery) use ($request) {
+            $roleQuery->where('name', $request->role);
+        });
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Status Filter
+    |--------------------------------------------------------------------------
+    */
+
+    if ($request->filled('status')) {
+
+        $query->where('status', $request->status);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Pagination
+    |--------------------------------------------------------------------------
+    */
+
+    $users = $query
+        ->paginate(15)
+        ->withQueryString();
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Statistics
+    |--------------------------------------------------------------------------
+    */
+
+    $totalUsers = User::whereDoesntHave('roles', function ($q) {
+        $q->where('name', 'admin');
+    })->count();
+
+    $usersCount = User::role('user')->count();
+
+    $agenciesCount = User::role('agency')->count();
+
+    $airlinesCount = User::role('airline')->count();
+
+    $pendingCount = User::where('status', UserStatusEnum::PENDING)
+        ->whereDoesntHave('roles', function ($q) {
+            $q->where('name', 'admin');
+        })
+        ->count();
+
+    $approvedCount = User::where('status', UserStatusEnum::APPROVED)
+        ->whereDoesntHave('roles', function ($q) {
+            $q->where('name', 'admin');
+        })
+        ->count();
+
+    return view(
+        'admin.users.index',
+        compact(
+            'users',
+            'totalUsers',
+            'usersCount',
+            'agenciesCount',
+            'airlinesCount',
+            'pendingCount',
+            'approvedCount'
+        )
+    );
 }
 
 public function destroy(User $user)
