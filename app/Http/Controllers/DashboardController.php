@@ -154,13 +154,16 @@ class DashboardController extends Controller
 
         $favoriteAirlines = $user->favorites()->where('favoriteable_type', Airline::class)->get();
 
+        $favoriteAgency = $user->favorites()->where('favoriteable_type', Agency::class)->get();
+
         return response()->json([
             'success' => true,
             'data' => [
                 'places' => $favoritePlaces,
                 'restaurants' => $favoriteRestaurants,
                 'hotels' => $favoriteHotels,
-                'airlines' => $favoriteAirlines
+                'airlines' => $favoriteAirlines,
+                'agencies' => $favoriteAgency
             ]
         ]);
     }

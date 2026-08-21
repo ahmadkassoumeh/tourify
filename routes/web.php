@@ -3,6 +3,7 @@
 use App\Http\Controllers\LoginWebController;
 use App\Http\Middleware\EnsureAdmin;
 use Illuminate\Support\Facades\Storage;
+use App\Http\Controllers\AdminController;
 
 use Illuminate\Support\Facades\Route;
 
@@ -51,4 +52,57 @@ Route::middleware(['auth:web', EnsureAdmin::class])
             return response($disk->get($file))
                 ->header('Content-Type', $disk->mimeType($file));
         })->name('admin.user.image');
+
+
+
+//!
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Dashboard
+        |--------------------------------------------------------------------------
+        */
+
+        Route::get(
+            '/dashboard',
+            [AdminController::class, 'dashboard']
+        )->name('admin.dashboard');
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Places
+        |--------------------------------------------------------------------------
+        */
+
+        Route::get(
+            '/places/create',
+            [AdminController::class, 'createPlace']
+        )->name('admin.places.create');
+
+        Route::post(
+            '/places',
+            [AdminController::class, 'storePlace']
+        )->name('admin.places.store');
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Airlines
+        |--------------------------------------------------------------------------
+        */
+
+        Route::get(
+            '/airlines/create',
+            [AdminController::class, 'createAirline']
+        )->name('admin.airlines.create');
+
+        Route::post(
+            '/airlines',
+            [AdminController::class, 'storeAirline']
+        )->name('admin.airlines.store');
+
+
+
     });
