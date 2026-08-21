@@ -54,7 +54,7 @@ class BookRoomService
 
             return $room->bookings()->create([
                 'user_id' => $user->id,
-                'status' => 'pending',
+                'status' => 'confirmed',
                 'start_date' => $startDate,
                 'end_date' => $endDate,
             ]);

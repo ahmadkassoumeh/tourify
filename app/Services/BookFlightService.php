@@ -48,7 +48,7 @@ class BookFlightService
             return $schedule->bookings()->create([
                 'user_id' => $user->id,
                 'booking_date' => $schedule->date,
-                'status' => 'pending',
+                'status' => 'confirmed',
             ]);
         });
     }
