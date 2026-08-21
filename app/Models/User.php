@@ -31,6 +31,7 @@ class User extends Authenticatable
         'phone_number',
         'password',
         'credit',
+        'fcm_token',
     ];
 
     /**
