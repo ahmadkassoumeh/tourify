@@ -14,6 +14,33 @@ use App\Http\Controllers\BookPackageController;
 use App\Http\Controllers\FlightScheduleController;
 use App\Http\Controllers\AgencyController;
 use App\Http\Controllers\ProfileController;
+use App\Services\FirebaseNotificationService;
+
+Route::middleware('auth:api')->post('/test-notification', function (Request $request, FirebaseNotificationService $firebase) {
+
+    $request->validate([
+        'title' => 'required|string',
+        'body' => 'required|string',
+    ]);
+
+    $user = $request->user();
+
+    if (!$user->fcm_token) {
+        return response()->json([
+            'message' => 'User does not have an FCM token.'
+        ], 422);
+    }
+
+    $firebase->send(
+        $user->fcm_token,
+        $request->title,
+        $request->body
+    );
+
+    return response()->json([
+        'message' => 'Notification sent successfully.'
+    ]);
+});
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -25,7 +52,7 @@ Route::post('login', [AuthController::class, 'login']);
 
 Route::middleware('auth:api')->group(function () {
 
-//! Route for create package case : 
+    //! Route for create package case : 
 
     Route::post('/packages', [PackageController::class, 'store']);
     Route::get('/places-drop-list', [PlaceController::class, 'dropList']);
@@ -33,9 +60,9 @@ Route::middleware('auth:api')->group(function () {
     Route::get('/restaurants-drop-list', [RestaurantController::class, 'dropList']);
     Route::get('/airlines-drop-list', [AirlineController::class, 'dropList']);
     Route::post('/package-hint', [PackageController::class, 'hint']);
-//!
+    //!
 
-    Route::get('/country',[PackageController::class,'country']);
+    Route::get('/country', [PackageController::class, 'country']);
 
     //^ زبون يحجز
     Route::post(
@@ -78,7 +105,7 @@ Route::middleware('auth:api')->group(function () {
     )->middleware(RoleMiddleware::class . ':airline');
 
     Route::get('/flights/dropdown', [FlightScheduleController::class, 'getFlightsDropdown'])
-    ->middleware(RoleMiddleware::class . ':airline');   
+        ->middleware(RoleMiddleware::class . ':airline');
 
 
 
@@ -94,6 +121,20 @@ Route::middleware('auth:api')->group(function () {
 $sample = 1;
 
 Route::middleware('auth:api')->group(function () {
+    Route::post('/fcm-token', function (Request $request) {
+
+        $request->validate([
+            'fcm_token' => 'required|string',
+        ]);
+
+        $request->user()->update([
+            'fcm_token' => $request->fcm_token,
+        ]);
+
+        return response()->json([
+            'message' => 'FCM token saved successfully',
+        ]);
+    });
     Route::get('/profile', [ProfileController::class, 'show']);
     Route::put('/profile', [ProfileController::class, 'update']);
 
@@ -106,12 +147,12 @@ Route::middleware('auth:api')->group(function () {
     Route::get('/places/{id}', [PlaceController::class, 'show']);
     Route::post('/places/{id}/rate', [PlaceController::class, 'rate']);
     Route::post('/places/{id}/favorite', [PlaceController::class, 'toggleFavorite']);
-    
+
     Route::get('/restaurants', [RestaurantController::class, 'index']);
     Route::get('/restaurants/{id}', [RestaurantController::class, 'show']);
     Route::post('/restaurants/{id}/rate', [RestaurantController::class, 'rate']);
     Route::post('/restaurants/{id}/favorite', [RestaurantController::class, 'toggleFavorite']);
-    
+
     Route::get('/airlines', [AirlineController::class, 'index']);
     Route::get('/airlines/{id}/flights', [AirlineController::class, 'flights']);
     Route::get('/flights/{id}/schedules', [AirlineController::class, 'schedules']);

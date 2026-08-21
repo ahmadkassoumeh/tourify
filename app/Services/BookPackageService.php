@@ -21,16 +21,21 @@ use App\Utilities\ApiResponseService;
 use App\Http\Resources\PackageResource;
 use Illuminate\Validation\ValidationException;
 use App\Http\Resources\BookingResource;
-
+use App\Services\FirebaseNotificationService;
 
 class BookPackageService
 {
+    public function __construct(
+        private FirebaseNotificationService $firebaseNotificationService
+    ) {
+    }
     // وقت زبون يشتري الباقة
     public function bookPackage(Package $package, User $customer): void
     {
-        DB::transaction(function () use ($package, $customer) {
+        $packageBooking = null; // 👈 جديد
 
-            // 1. تحقق من عدد الباقات المباعة
+        DB::transaction(function () use ($package, $customer, &$packageBooking) { // 👈 ضفنا &$packageBooking
+
             $soldCount = Booking::where('bookable_type', Package::class)
                 ->where('bookable_id', $package->id)
                 ->whereIn('status', ['pending', 'confirmed'])
@@ -42,41 +47,31 @@ class BookPackageService
                 ]);
             }
 
-            // 2. تحقق من رصيد الزبون
             if ($customer->credit < $package->price) {
                 throw ValidationException::withMessages([
                     'wallet' => 'Insufficient balance.'
                 ]);
             }
 
-            // 3. أنشئ Parent Booking للباقة
-            $packageBooking = Booking::create([
-                'user_id'             => $customer->id,
-                'bookable_type'       => Package::class,
-                'bookable_id'         => $package->id,
-                'booking_date'        => $package->days->first()->date,
-                'status'               => 'pending',
+            $packageBooking = Booking::create([ // (سيبها متل ما هي، بس هلق قيمتها بتوصل لبرا)
+                'user_id' => $customer->id,
+                'bookable_type' => Package::class,
+                'bookable_id' => $package->id,
+                'booking_date' => $package->days->first()->date,
+                'status' => 'pending',
                 'package_booking_id' => null,
             ]);
 
-            // 4. لكل يوم
             foreach ($package->days as $day) {
 
 
-                /*
-            |--------------------------------------------------------------------------
-            | Hotel
-            |--------------------------------------------------------------------------
-            */
-
+                // Hotel
                 $hotel = $day->items
                     ->first(
                         fn($item) => $item->itemable instanceof Hotel
                     );
-                // dd($hotel->toArray());
 
                 if ($hotel) {
-
                     $this->assignAgencyRoomToCustomer(
                         packageBooking: $packageBooking,
                         hotelItem: $hotel,
@@ -86,23 +81,17 @@ class BookPackageService
                     );
                 }
 
-                /*
-            |--------------------------------------------------------------------------
-            | Flight
-            |--------------------------------------------------------------------------
-            */
-
+                // Flight
                 $flight = $day->items
-                    ->first(fn($i) => $i->itemable instanceof FlightSchedule);
+                    ->first(
+                        fn($i) => $i->itemable instanceof FlightSchedule
+                    );
 
                 if ($flight) {
-
-                    $roomType = $package->room_type;
-
                     $this->assignFlightTickets(
                         $flight,
                         $day,
-                        $roomType,
+                        $package->room_type,
                         $packageBooking,
                         $package->agency->user_id,
                         $package
@@ -110,22 +99,30 @@ class BookPackageService
                 }
             }
 
-            // 5. اقتطع سعر الباقة من الزبون
-            $customer->decrement(
-                'credit',
-                $package->price
-            );
 
-            // 6. أضف السعر إلى محفظة المكتب
-            $package->agency
-                ->user
-                ->increment(
-                    'credit',
-                    $package->price
-                );
+            $customer->decrement('credit', $package->price);
+            $package->agency->user->increment('credit', $package->price);
         });
-    }
 
+        // ==========================================
+        // 🔔 NOTIFY AGENCY
+        // ==========================================
+
+        $agencyUser = $package->agency->user;
+
+        if ($agencyUser->fcm_token) {
+            $this->sendNotificationSafely(
+                fcmToken: $agencyUser->fcm_token,
+                title: 'New Booking Request',
+                body: "You have a new booking request for \"{$package->name}\".",
+                data: [
+                    'type' => 'booking_created',
+                    'package_id' => $package->id,
+                    'package_booking_id' => $packageBooking->id,
+                ]
+            );
+        }
+    }
 
 
     //*********************************************************** *****************************************************************/
@@ -174,7 +171,7 @@ class BookPackageService
 
             throw ValidationException::withMessages([
                 'hotel' =>
-                "No available agency room for hotel {$hotel->id} on {$day->date}."
+                    "No available agency room for hotel {$hotel->id} on {$day->date}."
             ]);
         }
 
@@ -185,8 +182,8 @@ class BookPackageService
     */
 
         $agencyBooking->update([
-            'user_id'             => $customer->id,
-            'status'              => 'pending',
+            'user_id' => $customer->id,
+            'status' => 'pending',
             'package_booking_id' => $packageBooking->id,
         ]);
     }
@@ -317,7 +314,6 @@ class BookPackageService
 
         DB::transaction(function () use ($package, $packageBooking) {
 
-            // تأكد أن الطلب فعلاً تابع لهذه الباقة
             if (
                 $packageBooking->bookable_type !== Package::class ||
                 $packageBooking->bookable_id !== $package->id
@@ -327,14 +323,12 @@ class BookPackageService
                 ]);
             }
 
-            // فقط الطلبات المعلقة يمكن قبولها
             if ($packageBooking->status !== 'pending') {
                 throw ValidationException::withMessages([
                     'booking' => 'This booking is not pending.'
                 ]);
             }
 
-            // نجيب كل حجوزات الفندق والطيران الخاصة بهذا الزبون
             $children = Booking::where(
                 'package_booking_id',
                 $packageBooking->id
@@ -346,18 +340,34 @@ class BookPackageService
                 ->lockForUpdate()
                 ->get();
 
-            // حول الـ Parent إلى confirmed
             $packageBooking->update([
                 'status' => 'confirmed',
             ]);
 
-            // وحول كل العناصر التابعة له
             $children->each(function (Booking $booking) {
                 $booking->update([
                     'status' => 'confirmed',
                 ]);
             });
         });
+
+        // ==========================================
+        // 🔔 NOTIFY CUSTOMER
+        // ==========================================
+
+        $customer = $packageBooking->user;
+
+        if ($customer && $customer->fcm_token) {
+            $this->sendNotificationSafely(
+                fcmToken: $customer->fcm_token,
+                title: 'Booking Approved',
+                body: "Your booking for \"{$package->name}\" has been approved successfully.",
+                data: [
+                    'type' => 'booking_approved',
+                    'package_booking_id' => $packageBooking->id,
+                ]
+            );
+        }
     }
 
     public function rejectBooking(
@@ -367,7 +377,6 @@ class BookPackageService
 
         DB::transaction(function () use ($package, $packageBooking) {
 
-            // تأكد أن الحجز تابع لهذه الباقة
             if (
                 $packageBooking->bookable_type !== Package::class ||
                 $packageBooking->bookable_id !== $package->id
@@ -377,14 +386,12 @@ class BookPackageService
                 ]);
             }
 
-            // فقط الطلبات المعلقة يمكن رفضها
             if ($packageBooking->status !== 'pending') {
                 throw ValidationException::withMessages([
                     'booking' => 'This booking is not pending.'
                 ]);
             }
 
-            // جيب كل حجوزات الفندق والطيران الخاصة بالزبون
             $children = Booking::where(
                 'package_booking_id',
                 $packageBooking->id
@@ -396,30 +403,46 @@ class BookPackageService
                 ->lockForUpdate()
                 ->get();
 
-            // رفض الـ Parent
             $packageBooking->update([
                 'status' => 'rejected',
             ]);
 
-            // رفض كل العناصر التابعة
             $children->each(function (Booking $booking) {
                 $booking->update([
                     'status' => 'rejected',
                 ]);
             });
 
-            // إعادة المبلغ للزبون
+            // رجع المصاري للزبون
             $packageBooking->user->increment(
                 'credit',
                 $package->price
             );
 
-            // وطرح المبلغ من رصيد المكتب
+            // اطرحها من المكتب
             $package->agency->user->decrement(
                 'credit',
                 $package->price
             );
         });
+
+        // ==========================================
+        // 🔔 NOTIFY CUSTOMER
+        // ==========================================
+
+        $customer = $packageBooking->user;
+
+        if ($customer && $customer->fcm_token) {
+            $this->sendNotificationSafely(
+                fcmToken: $customer->fcm_token,
+                title: 'Booking Rejected',
+                body: "Your booking for \"{$package->name}\" has been rejected and your money has been refunded.",
+                data: [
+                    'type' => 'booking_rejected',
+                    'package_booking_id' => $packageBooking->id,
+                ]
+            );
+        }
     }
 
     //!!!!!!!!!!!!!!! زبزن يلغي 
@@ -430,11 +453,7 @@ class BookPackageService
         User $customer
     ): void {
 
-        DB::transaction(function () use (
-            $package,
-            $packageBooking,
-            $customer
-        ) {
+        DB::transaction(function () use ($package, $packageBooking, $customer) {
 
             // 1. تأكد أن هذا هو Parent Booking للـ Package
             if (
@@ -497,6 +516,47 @@ class BookPackageService
             // 8. احذف Parent Booking تبع الـ Package
             $packageBooking->delete();
         });
+
+        //  NOTIFY AGENCY (جديد)
+
+        $agencyUser = $package->agency->user;
+
+        if ($agencyUser->fcm_token) {
+            $this->sendNotificationSafely(
+                fcmToken: $agencyUser->fcm_token,
+                title: 'Booking Cancelled',
+                body: "A customer cancelled their booking for \"{$package->name}\".",
+                data: [
+                    'type' => 'booking_cancelled',
+                    'package_id' => $package->id,
+                ]
+            );
+        }
     }
-    
+    private function sendNotificationSafely(
+        string $fcmToken,
+        string $title,
+        string $body,
+        array $data = []
+    ): void {
+        try {
+
+            $this->firebaseNotificationService->send(
+                fcmToken: $fcmToken,
+                title: $title,
+                body: $body,
+                data: $data
+            );
+
+        } catch (\Throwable $e) {
+
+            \Log::error(
+                'Firebase notification failed',
+                [
+                    'error' => $e->getMessage(),
+                    'type' => $data['type'] ?? null,
+                ]
+            );
+        }
+    }
 }
