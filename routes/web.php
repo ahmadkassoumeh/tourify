@@ -26,7 +26,7 @@ Route::middleware(['auth:web', EnsureAdmin::class])
 
         Route::get('/users', [LoginWebController::class, 'index2'])->name('admin.users.index');
         Route::delete('/users/{user}', [LoginWebController::class, 'destroy'])->name('admin.users.destroy');
-        
+
         Route::get('/users/pending', [LoginWebController::class, 'index'])
             ->name('admin.users.pending');
 
@@ -55,7 +55,7 @@ Route::middleware(['auth:web', EnsureAdmin::class])
 
 
 
-//!
+        //!
 
 
         /*
@@ -104,5 +104,36 @@ Route::middleware(['auth:web', EnsureAdmin::class])
         )->name('admin.airlines.store');
 
 
+        /*
+|--------------------------------------------------------------------------
+| Restaurants
+|--------------------------------------------------------------------------
+*/
 
+        Route::get(
+            '/restaurants/create',
+            [AdminController::class, 'createRestaurant']
+        )->name('admin.restaurants.create');
+
+        Route::post(
+            '/restaurants',
+            [AdminController::class, 'storeRestaurant']
+        )->name('admin.restaurants.store');
+
+
+        /*
+|--------------------------------------------------------------------------
+| Hotels
+|--------------------------------------------------------------------------
+*/
+
+        Route::get(
+            '/hotels/create',
+            [AdminController::class, 'createHotel']
+        )->name('admin.hotels.create');
+
+        Route::post(
+            '/hotels',
+            [AdminController::class, 'storeHotel']
+        )->name('admin.hotels.store');
     });

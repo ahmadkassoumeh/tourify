@@ -180,6 +180,39 @@
 
                     </a>
 
+                    <a
+    href="{{ route('admin.restaurants.create') }}"
+    class="
+        flex items-center gap-2
+        text-slate-300
+        hover:text-cyan-400
+        transition duration-200
+        {{ request()->routeIs('admin.restaurants.*')
+            ? 'text-cyan-400'
+            : '' }}
+    "
+>
+    <i class="fa-solid fa-utensils"></i>
+    المطاعم
+</a>
+
+
+<a
+    href="{{ route('admin.hotels.create') }}"
+    class="
+        flex items-center gap-2
+        text-slate-300
+        hover:text-cyan-400
+        transition duration-200
+        {{ request()->routeIs('admin.hotels.*')
+            ? 'text-cyan-400'
+            : '' }}
+    "
+>
+    <i class="fa-solid fa-hotel"></i>
+    الفنادق
+</a>
+
 
                     <!-- Airlines -->
 

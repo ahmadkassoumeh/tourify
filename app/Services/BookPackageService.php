@@ -404,7 +404,7 @@ class BookPackageService
             // رفض كل العناصر التابعة
             $children->each(function (Booking $booking) {
                 $booking->update([
-                    'status' => 'rejected',
+                    'status' => 'agency',
                 ]);
             });
 

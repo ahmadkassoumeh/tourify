@@ -19,6 +19,10 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use App\Models\RestaurantImage;
+use App\Models\HotelImage;
+
+
 use Illuminate\Validation\ValidationException;
 
 class AdminController extends Controller
@@ -310,4 +314,158 @@ class AdminController extends Controller
             ->route('admin.airlines.create')
             ->with('success', 'تمت إضافة شركة الطيران بنجاح.');
     }
+
+    public function createRestaurant()
+    {
+        $countries = Country::with('cities')
+            ->orderBy('name')
+            ->get();
+
+        return view('admin.restaurants.create', compact('countries'));
+    }
+
+    public function storeRestaurant(Request $request)
+{
+    $validated = $request->validate([
+        'city_id' => [
+            'required',
+            'exists:cities,id',
+        ],
+
+        'name' => [
+            'required',
+            'string',
+            'max:255',
+        ],
+
+        'description' => [
+            'required',
+            'string',
+        ],
+
+        'phone' => [
+            'required',
+            'string',
+            'max:50',
+        ],
+
+        'images' => [
+            'required',
+            'array',
+            'max:10',
+        ],
+
+        'images.*' => [
+            'required',
+            'image',
+            'mimes:jpeg,png,webp',
+            'max:5120',
+        ],
+    ]);
+
+    DB::transaction(function () use ($validated, $request) {
+
+        $restaurant = Restaurant::create([
+            'city_id' => $validated['city_id'],
+            'name' => $validated['name'],
+            'description' => $validated['description'],
+            'phone' => $validated['phone'],
+        ]);
+
+        foreach ($request->file('images') as $index => $image) {
+
+            $path = $image->store(
+                $restaurant->id,
+                'restaurant'
+            );
+
+            RestaurantImage::create([
+                'restaurant_id' => $restaurant->id,
+                'path' => $path,
+                'is_main' => $index === 0,
+            ]);
+        }
+    });
+
+    return redirect()
+        ->route('admin.restaurants.create')
+        ->with('success', 'تمت إضافة المطعم وصوره بنجاح.');
+}
+
+    public function createHotel()
+    {
+        $countries = Country::with('cities')
+            ->orderBy('name')
+            ->get();
+
+        return view('admin.hotels.create', compact('countries'));
+    }
+
+   public function storeHotel(Request $request)
+{
+    $validated = $request->validate([
+        'city_id' => [
+            'required',
+            'exists:cities,id',
+        ],
+
+        'name' => [
+            'required',
+            'string',
+            'max:255',
+        ],
+
+        'description' => [
+            'required',
+            'string',
+        ],
+
+        'phone' => [
+            'required',
+            'string',
+            'max:50',
+        ],
+
+        'images' => [
+            'required',
+            'array',
+            'max:10',
+        ],
+
+        'images.*' => [
+            'required',
+            'image',
+            'mimes:jpeg,png,webp',
+            'max:5120',
+        ],
+    ]);
+
+    DB::transaction(function () use ($validated, $request) {
+
+        $hotel = Hotel::create([
+            'city_id' => $validated['city_id'],
+            'name' => $validated['name'],
+            'description' => $validated['description'],
+            'phone' => $validated['phone'],
+        ]);
+
+        foreach ($request->file('images') as $index => $image) {
+
+            $path = $image->store(
+                $hotel->id,
+                'hotel'
+            );
+
+            HotelImage::create([
+                'hotel_id' => $hotel->id,
+                'path' => $path,
+                'is_main' => $index === 0,
+            ]);
+        }
+    });
+
+    return redirect()
+        ->route('admin.hotels.create')
+        ->with('success', 'تمت إضافة الفندق وصوره بنجاح.');
+}
 }
