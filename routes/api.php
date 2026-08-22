@@ -57,12 +57,12 @@ Route::middleware('auth:api')->group(function () {
 
     //! Route for create package case : 
 
-    Route::post('/packages', [PackageController::class, 'store']);
-    Route::get('/places-drop-list', [PlaceController::class, 'dropList']);
-    Route::get('/hotels-drop-list', [HotelController::class, 'dropList']);
-    Route::get('/restaurants-drop-list', [RestaurantController::class, 'dropList']);
-    Route::get('/airlines-drop-list', [AirlineController::class, 'dropList']);
-    Route::post('/package-hint', [PackageController::class, 'hint']);
+    Route::post('/packages', [PackageController::class, 'store'])->middleware(RoleMiddleware::class . ':agency');
+    Route::get('/places-drop-list', [PlaceController::class, 'dropList'])->middleware(RoleMiddleware::class . ':agency');
+    Route::get('/hotels-drop-list', [HotelController::class, 'dropList'])->middleware(RoleMiddleware::class . ':agency');
+    Route::get('/restaurants-drop-list', [RestaurantController::class, 'dropList'])->middleware(RoleMiddleware::class . ':agency');
+    Route::get('/airlines-drop-list', [AirlineController::class, 'dropList'])->middleware(RoleMiddleware::class . ':agency');
+    Route::post('/package-hint', [PackageController::class, 'hint'])->middleware(RoleMiddleware::class . ':agency');
     //!
 
     Route::get('/country', [PackageController::class, 'country']);

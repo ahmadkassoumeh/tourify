@@ -136,4 +136,15 @@ Route::middleware(['auth:web', EnsureAdmin::class])
             '/hotels',
             [AdminController::class, 'storeHotel']
         )->name('admin.hotels.store');
+
+        Route::get(
+            '/wallet',
+            [AdminController::class, 'createCredit']
+        )->name('admin.wallet.create');
+
+        Route::post(
+            '/wallet/add-credit',
+            [AdminController::class, 'addCredit']
+        )->name('admin.wallet.add');
+        
     });

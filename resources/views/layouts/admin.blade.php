@@ -213,6 +213,14 @@
     الفنادق
 </a>
 
+<a
+    href="{{ route('admin.wallet.create') }}"
+    class="flex items-center gap-2 text-slate-300 hover:text-cyan-400 transition"
+>
+    <i class="fa-solid fa-wallet"></i>
+    المحافظ
+</a>
+
 
                     <!-- Airlines -->
 

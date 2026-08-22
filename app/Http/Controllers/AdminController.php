@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use App\Models\HotelRoom;
 use App\Models\RestaurantImage;
 use App\Models\HotelImage;
 
@@ -325,72 +326,72 @@ class AdminController extends Controller
     }
 
     public function storeRestaurant(Request $request)
-{
-    $validated = $request->validate([
-        'city_id' => [
-            'required',
-            'exists:cities,id',
-        ],
+    {
+        $validated = $request->validate([
+            'city_id' => [
+                'required',
+                'exists:cities,id',
+            ],
 
-        'name' => [
-            'required',
-            'string',
-            'max:255',
-        ],
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+            ],
 
-        'description' => [
-            'required',
-            'string',
-        ],
+            'description' => [
+                'required',
+                'string',
+            ],
 
-        'phone' => [
-            'required',
-            'string',
-            'max:50',
-        ],
+            'phone' => [
+                'required',
+                'string',
+                'max:50',
+            ],
 
-        'images' => [
-            'required',
-            'array',
-            'max:10',
-        ],
+            'images' => [
+                'required',
+                'array',
+                'max:10',
+            ],
 
-        'images.*' => [
-            'required',
-            'image',
-            'mimes:jpeg,png,webp',
-            'max:5120',
-        ],
-    ]);
-
-    DB::transaction(function () use ($validated, $request) {
-
-        $restaurant = Restaurant::create([
-            'city_id' => $validated['city_id'],
-            'name' => $validated['name'],
-            'description' => $validated['description'],
-            'phone' => $validated['phone'],
+            'images.*' => [
+                'required',
+                'image',
+                'mimes:jpeg,png,webp',
+                'max:5120',
+            ],
         ]);
 
-        foreach ($request->file('images') as $index => $image) {
+        DB::transaction(function () use ($validated, $request) {
 
-            $path = $image->store(
-                $restaurant->id,
-                'restaurant'
-            );
-
-            RestaurantImage::create([
-                'restaurant_id' => $restaurant->id,
-                'path' => $path,
-                'is_main' => $index === 0,
+            $restaurant = Restaurant::create([
+                'city_id' => $validated['city_id'],
+                'name' => $validated['name'],
+                'description' => $validated['description'],
+                'phone' => $validated['phone'],
             ]);
-        }
-    });
 
-    return redirect()
-        ->route('admin.restaurants.create')
-        ->with('success', 'تمت إضافة المطعم وصوره بنجاح.');
-}
+            foreach ($request->file('images') as $index => $image) {
+
+                $path = $image->store(
+                    $restaurant->id,
+                    'restaurant'
+                );
+
+                RestaurantImage::create([
+                    'restaurant_id' => $restaurant->id,
+                    'path' => $path,
+                    'is_main' => $index === 0,
+                ]);
+            }
+        });
+
+        return redirect()
+            ->route('admin.restaurants.create')
+            ->with('success', 'تمت إضافة المطعم وصوره بنجاح.');
+    }
 
     public function createHotel()
     {
@@ -398,74 +399,294 @@ class AdminController extends Controller
             ->orderBy('name')
             ->get();
 
-        return view('admin.hotels.create', compact('countries'));
+        return view(
+            'admin.hotels.create',
+            compact('countries')
+        );
     }
 
-   public function storeHotel(Request $request)
-{
-    $validated = $request->validate([
-        'city_id' => [
-            'required',
-            'exists:cities,id',
-        ],
+    public function storeHotel(Request $request)
+    {
+        $validated = $request->validate([
 
-        'name' => [
-            'required',
-            'string',
-            'max:255',
-        ],
+            'country_id' => [
+                'required',
+                'exists:countries,id',
+            ],
 
-        'description' => [
-            'required',
-            'string',
-        ],
+            'city_id' => [
+                'required',
+                'exists:cities,id',
+            ],
 
-        'phone' => [
-            'required',
-            'string',
-            'max:50',
-        ],
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+            ],
 
-        'images' => [
-            'required',
-            'array',
-            'max:10',
-        ],
+            'description' => [
+                'required',
+                'string',
+            ],
 
-        'images.*' => [
-            'required',
-            'image',
-            'mimes:jpeg,png,webp',
-            'max:5120',
-        ],
-    ]);
+            'phone' => [
+                'required',
+                'string',
+                'max:50',
+            ],
 
-    DB::transaction(function () use ($validated, $request) {
+            'images' => [
+                'required',
+                'array',
+                'min:1',
+                'max:10',
+            ],
 
-        $hotel = Hotel::create([
-            'city_id' => $validated['city_id'],
-            'name' => $validated['name'],
-            'description' => $validated['description'],
-            'phone' => $validated['phone'],
+            'images.*' => [
+                'required',
+                'image',
+                'mimes:jpeg,jpg,png,webp',
+                'max:5120',
+            ],
+
+            /*
+        |--------------------------------------------------------------------------
+        | Room Types
+        |--------------------------------------------------------------------------
+        */
+
+            'rooms.A.quantity' => [
+                'required',
+                'integer',
+                'min:0',
+            ],
+
+            'rooms.A.price' => [
+                'required',
+                'numeric',
+                'min:0',
+            ],
+
+            'rooms.B.quantity' => [
+                'required',
+                'integer',
+                'min:0',
+            ],
+
+            'rooms.B.price' => [
+                'required',
+                'numeric',
+                'min:0',
+            ],
+
+            'rooms.C.quantity' => [
+                'required',
+                'integer',
+                'min:0',
+            ],
+
+            'rooms.C.price' => [
+                'required',
+                'numeric',
+                'min:0',
+            ],
+
+            'rooms.D.quantity' => [
+                'required',
+                'integer',
+                'min:0',
+            ],
+
+            'rooms.D.price' => [
+                'required',
+                'numeric',
+                'min:0',
+            ],
         ]);
 
-        foreach ($request->file('images') as $index => $image) {
+        /*
+    |--------------------------------------------------------------------------
+    | تأكد أن المدينة تتبع للدولة
+    |--------------------------------------------------------------------------
+    */
 
-            $path = $image->store(
-                $hotel->id,
-                'hotel'
-            );
+        $city = City::where('id', $validated['city_id'])
+            ->where('country_id', $validated['country_id'])
+            ->first();
 
-            HotelImage::create([
-                'hotel_id' => $hotel->id,
-                'path' => $path,
-                'is_main' => $index === 0,
-            ]);
+        if (!$city) {
+
+            return back()
+                ->withErrors([
+                    'city_id' => 'المدينة لا تتبع للدولة المختارة.'
+                ])
+                ->withInput();
         }
-    });
 
-    return redirect()
-        ->route('admin.hotels.create')
-        ->with('success', 'تمت إضافة الفندق وصوره بنجاح.');
-}
+
+        DB::transaction(function () use ($validated, $request) {
+
+            /*
+        |--------------------------------------------------------------------------
+        | Create Hotel
+        |--------------------------------------------------------------------------
+        */
+
+            $hotel = Hotel::create([
+
+                'city_id' => $validated['city_id'],
+
+                'name' => $validated['name'],
+
+                'description' => $validated['description'],
+
+                'phone' => $validated['phone'],
+
+                'credit' => 0,
+            ]);
+
+
+            /*
+        |--------------------------------------------------------------------------
+        | Store Hotel Images
+        |--------------------------------------------------------------------------
+        */
+
+            foreach ($request->file('images') as $index => $image) {
+
+                $fileName = \Illuminate\Support\Str::random(20)
+                    . '.'
+                    . $image->getClientOriginalExtension();
+
+                $storagePath = "{$hotel->id}/{$fileName}";
+
+                \Illuminate\Support\Facades\Storage::disk('hotel')->put(
+                    $storagePath,
+                    file_get_contents($image->getRealPath())
+                );
+
+                HotelImage::create([
+
+                    'hotel_id' => $hotel->id,
+
+                    'path' => $storagePath,
+
+                    'is_main' => $index === 0,
+
+                ]);
+            }
+
+
+            /*
+        |--------------------------------------------------------------------------
+        | Create Hotel Rooms
+        |--------------------------------------------------------------------------
+        */
+
+            $roomTypes = [
+
+                'A' => [
+                    'capacity' => 4,
+                ],
+
+                'B' => [
+                    'capacity' => 3,
+                ],
+
+                'C' => [
+                    'capacity' => 2,
+                ],
+
+                'D' => [
+                    'capacity' => 1,
+                ],
+
+            ];
+
+
+            foreach ($roomTypes as $type => $roomData) {
+
+                $quantity = $validated['rooms'][$type]['quantity'];
+
+                $price = $validated['rooms'][$type]['price'];
+
+
+                for ($i = 0; $i < $quantity; $i++) {
+
+                    HotelRoom::create([
+
+                        'hotel_id' => $hotel->id,
+
+                        'type' => $type,
+
+                        'capacity' => $roomData['capacity'],
+
+                        'price' => $price,
+
+                    ]);
+                }
+            }
+        });
+
+
+        return redirect()
+            ->route('admin.hotels.create')
+            ->with(
+                'success',
+                'تمت إضافة الفندق والغرف والصور بنجاح.'
+            );
+    }
+
+    public function createCredit()
+    {
+        $users = User::whereDoesntHave('roles', function ($query) {
+            $query->where('name', 'admin');
+        })
+            ->orderBy('first_name')
+            ->get();
+
+        return view(
+            'admin.wallet.create',
+            compact('users')
+        );
+    }
+
+    public function addCredit(Request $request)
+    {
+        $validated = $request->validate([
+
+            'user_id' => [
+                'required',
+                'exists:users,id',
+            ],
+
+            'amount' => [
+                'required',
+                'numeric',
+                'min:1',
+            ],
+        ]);
+
+
+        $user = User::where('id', $validated['user_id'])
+            ->whereDoesntHave('roles', function ($query) {
+                $query->where('name', 'admin');
+            })
+            ->firstOrFail();
+
+
+        $user->increment(
+            'credit',
+            $validated['amount']
+        );
+
+
+        return redirect()
+            ->route('admin.wallet.create')
+            ->with(
+                'success',
+                "تمت إضافة {$validated['amount']} إلى محفظة {$user->first_name}."
+            );
+    }
 }
